@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs & packaged artifacts
+src-native/bin/
+src-native/obj/
+src-tauri/target/
+tests/**/bin/
+tests/**/obj/
+dist/
+release/
+*.zip
+
+# Local logs & runtime caches
+*.log
+hub-startup.log
+HubWebView2Cache/
+*.tmp
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Editor / IDE configuration
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
