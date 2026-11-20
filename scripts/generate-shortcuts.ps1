@@ -787,10 +787,58 @@ namespace AccountLauncher$id
     )
     Write-Host "[+] Created AUMID Shortcut ($($acc.Aumid)): $shortcutPath" -ForegroundColor Cyan
 
+    $startMenuRoot = if ($env:APPDATA) { Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs" } else { [Environment]::GetFolderPath("Programs") }
+    if (-not [string]::IsNullOrWhiteSpace($startMenuRoot)) {
+        $startMenuDir = Join-Path $startMenuRoot "Antigravity Hub"
+        New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
+        Copy-Item $shortcutPath (Join-Path $startMenuDir $shortcutName) -Force
+    }
+
     if ($CopyToDesktop) {
         $desktopDir = [Environment]::GetFolderPath("Desktop")
         if (Test-Path $desktopDir) {
             Copy-Item $shortcutPath (Join-Path $desktopDir $shortcutName) -Force
+        }
+    }
+}
+
+# 3b. Create Start Menu (& optional Desktop) shortcut for Antigravity Hub itself (enables Pin to Start)
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$hubExe = Join-Path $repoRoot "release\AntigravityHub.exe"
+if (-not (Test-Path $hubExe)) {
+    $hubExe = Join-Path (Split-Path -Parent $repoRoot) "release\AntigravityHub.exe"
+}
+$hubIcon = Join-Path $repoRoot "assets\icons\AntigravityHub.ico"
+if (-not (Test-Path $hubIcon)) {
+    $hubIcon = Join-Path $IconsDir "AntigravityHub.ico"
+}
+if (Test-Path $hubExe) {
+    $hubShortcutName = "Antigravity Hub.lnk"
+    $hubShortcutPath = Join-Path $ShortcutsDir $hubShortcutName
+    [AntigravityShortcutBuilder.Builder]::CreateAumidShortcut(
+        $hubShortcutPath,
+        $hubExe,
+        "",
+        (Split-Path -Parent $hubExe),
+        "Antigravity Multi-Account Hub Dashboard",
+        $(if (Test-Path $hubIcon) { $hubIcon } else { $hubExe }),
+        "Antigravity.MultiAccount.Hub",
+        "Antigravity Hub"
+    )
+    Write-Host "[+] Created Hub Shortcut: $hubShortcutPath" -ForegroundColor Green
+
+    $startMenuRoot = if ($env:APPDATA) { Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs" } else { [Environment]::GetFolderPath("Programs") }
+    if (-not [string]::IsNullOrWhiteSpace($startMenuRoot)) {
+        $startMenuDir = Join-Path $startMenuRoot "Antigravity Hub"
+        New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
+        Copy-Item $hubShortcutPath (Join-Path $startMenuDir $hubShortcutName) -Force
+        Write-Host "[+] Added to Start Menu (Pin to Start ready): $startMenuDir\$hubShortcutName" -ForegroundColor Green
+    }
+
+    if ($CopyToDesktop) {
+        $desktopDir = [Environment]::GetFolderPath("Desktop")
+        if (Test-Path $desktopDir) {
+            Copy-Item $hubShortcutPath (Join-Path $desktopDir $hubShortcutName) -Force
         }
     }
 }

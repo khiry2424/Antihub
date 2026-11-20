@@ -8,7 +8,7 @@ echo   Generating 3 Isolated Profiles, Custom Badged Icons ^& AUMID Shortcuts...
 echo ============================================================================
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\generate-shortcuts.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\generate-shortcuts.ps1" -CopyToDesktop
 if errorlevel 1 (
     echo.
     echo [ERROR] Shortcut generation encountered an issue.
@@ -20,8 +20,8 @@ echo.
 echo ============================================================================
 echo  SETUP COMPLETED SUCCESSFULLY!
 echo.
-echo  3 Independent desktop shortcuts created for Account 1, 2, and 3.
-echo  You can now start the Hub dashboard by double-clicking 'Run-AntigravityHub.bat'.
+echo  Shortcuts created in Start Menu ("Antigravity Hub" - Pin to Start ready) and Desktop.
+echo  You can now start the Hub from Start Menu or 'Run-AntigravityHub.bat'.
 echo ============================================================================
 echo.
 pause
