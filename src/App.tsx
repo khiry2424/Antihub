@@ -279,7 +279,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <div className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-6 py-3 space-y-3">
+      <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-3">
         {/* Top Command Bar (Pro Studio Header) */}
         <header className="glass-panel rounded-xl px-4 py-2.5 border border-white/[0.08] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
           <div className="flex items-center gap-3">
@@ -339,7 +339,7 @@ export const App: React.FC = () => {
           {/* Master Telemetry & Actions */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Live Aggregate Telemetry Pill */}
-            <div className="hidden xl:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/30 border border-white/[0.05] text-xs font-mono">
+            <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/30 border border-white/[0.05] text-xs font-mono">
               <span className="flex items-center gap-1.5 text-emerald-300">
                 <Activity className="w-3.5 h-3.5" />
                 {runningCount}/3 Active

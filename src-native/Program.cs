@@ -1665,17 +1665,92 @@ namespace AntigravityHub
 
     internal class DarkTrayColorTable : ProfessionalColorTable
     {
-        public override Color ToolStripDropDownBackground => Color.FromArgb(12, 18, 32);
-        public override Color MenuBorder => Color.FromArgb(30, 41, 59);
+        public override Color ToolStripDropDownBackground => Color.FromArgb(12, 17, 28);
+        public override Color MenuBorder => Color.FromArgb(36, 48, 70);
         public override Color MenuItemBorder => Color.FromArgb(56, 189, 248);
-        public override Color MenuItemSelected => Color.FromArgb(24, 36, 62);
-        public override Color MenuItemSelectedGradientBegin => Color.FromArgb(24, 36, 62);
-        public override Color MenuItemSelectedGradientEnd => Color.FromArgb(24, 36, 62);
-        public override Color ImageMarginGradientBegin => Color.FromArgb(12, 18, 32);
-        public override Color ImageMarginGradientMiddle => Color.FromArgb(12, 18, 32);
-        public override Color ImageMarginGradientEnd => Color.FromArgb(12, 18, 32);
+        public override Color MenuItemSelected => Color.FromArgb(24, 34, 54);
+        public override Color MenuItemSelectedGradientBegin => Color.FromArgb(24, 34, 54);
+        public override Color MenuItemSelectedGradientEnd => Color.FromArgb(24, 34, 54);
+        public override Color ImageMarginGradientBegin => Color.FromArgb(12, 17, 28);
+        public override Color ImageMarginGradientMiddle => Color.FromArgb(12, 17, 28);
+        public override Color ImageMarginGradientEnd => Color.FromArgb(12, 17, 28);
         public override Color SeparatorDark => Color.FromArgb(30, 41, 59);
         public override Color SeparatorLight => Color.FromArgb(30, 41, 59);
+    }
+
+    internal class PremiumTrayRenderer : ToolStripProfessionalRenderer
+    {
+        public PremiumTrayRenderer() : base(new DarkTrayColorTable())
+        {
+            RoundedEdges = false;
+        }
+
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            using var bg = new SolidBrush(Color.FromArgb(12, 17, 28));
+            e.Graphics.FillRectangle(bg, e.AffectedBounds);
+        }
+
+        protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+        {
+            var rect = new Rectangle(0, 0, e.AffectedBounds.Width - 1, e.AffectedBounds.Height - 1);
+            using var pen = new Pen(Color.FromArgb(38, 50, 72), 1f);
+            e.Graphics.DrawRectangle(pen, rect);
+        }
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            if (!e.Item.Enabled) return;
+            if (e.Item.Selected)
+            {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(5, 2, e.Item.Width - 10, e.Item.Height - 4);
+                using var path = RoundedRect(rect, 6);
+                using var fill = new SolidBrush(Color.FromArgb(26, 38, 60));
+                using var border = new Pen(Color.FromArgb(65, 56, 189, 248), 1f);
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(border, path);
+            }
+        }
+
+        protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+        {
+            int y = e.Item.Height / 2;
+            using var pen = new Pen(Color.FromArgb(30, 41, 59), 1f);
+            e.Graphics.DrawLine(pen, 10, y, e.Item.Width - 10, y);
+        }
+
+        protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var r = e.ArrowRectangle;
+            float cx = r.Left + r.Width / 2f;
+            float cy = r.Top + r.Height / 2f;
+            Color c = e.Item != null && e.Item.Selected ? Color.FromArgb(241, 245, 249) : Color.FromArgb(148, 163, 184);
+            using var pen = new Pen(c, 1.6f)
+            {
+                StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                EndCap = System.Drawing.Drawing2D.LineCap.Round
+            };
+            e.Graphics.DrawLines(pen, new[]
+            {
+                new PointF(cx - 2.5f, cy - 4f),
+                new PointF(cx + 2f, cy),
+                new PointF(cx - 2.5f, cy + 4f)
+            });
+        }
+
+        private static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle bounds, int radius)
+        {
+            int d = radius * 2;
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+            path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
     }
 
     #endregion
@@ -1688,6 +1763,7 @@ namespace AntigravityHub
         private readonly WebView2 _webView;
         private readonly NotifyIcon _notifyIcon;
         private readonly ContextMenuStrip _trayMenu;
+        private readonly Dictionary<string, Bitmap> _trayGlyphs = new();
         private readonly System.Threading.Timer _aumidTimer;
         private int _bgPollBusy = 0;
         private bool _allowExit = false;
@@ -1721,10 +1797,14 @@ namespace AntigravityHub
             // Initialize Dynamic Tray Context Menu
             _trayMenu = new ContextMenuStrip
             {
-                Renderer = new ToolStripProfessionalRenderer(new DarkTrayColorTable()),
+                Renderer = new PremiumTrayRenderer(),
+                ShowImageMargin = true,
+                ShowCheckMargin = false,
+                ImageScalingSize = new Size(20, 20),
+                Padding = new Padding(2, 6, 2, 6),
                 ForeColor = Color.FromArgb(241, 245, 249),
-                BackColor = Color.FromArgb(12, 18, 32),
-                Font = new Font("Segoe UI Semibold", 9.5f)
+                BackColor = Color.FromArgb(12, 17, 28),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular)
             };
             _trayMenu.Opening += OnTrayMenuOpening;
 
@@ -1869,14 +1949,162 @@ namespace AntigravityHub
             });
         }
 
+        private Bitmap GetTrayGlyph(string key)
+        {
+            if (_trayGlyphs.TryGetValue(key, out var existing))
+                return existing;
+
+            var bmp = new Bitmap(20, 20, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(bmp);
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.Clear(Color.Transparent);
+
+            switch (key)
+            {
+                case "hub":
+                {
+                    using var b1 = new SolidBrush(Color.FromArgb(4, 120, 87));
+                    using var b2 = new SolidBrush(Color.FromArgb(16, 185, 129));
+                    using var b3 = new SolidBrush(Color.FromArgb(110, 231, 183));
+                    g.FillPolygon(b1, new[] { new PointF(10, 11.5f), new PointF(17.5f, 14.5f), new PointF(10, 17.5f), new PointF(2.5f, 14.5f) });
+                    g.FillPolygon(b2, new[] { new PointF(10, 7f), new PointF(17.5f, 10f), new PointF(10, 13f), new PointF(2.5f, 10f) });
+                    g.FillPolygon(b3, new[] { new PointF(10, 2.5f), new PointF(17.5f, 5.5f), new PointF(10, 8.5f), new PointF(2.5f, 5.5f) });
+                    break;
+                }
+                case "acc-1-on":
+                case "acc-2-on":
+                case "acc-3-on":
+                case "acc-1-off":
+                case "acc-2-off":
+                case "acc-3-off":
+                {
+                    bool on = key.EndsWith("-on");
+                    string num = key.Contains("-1-") ? "1" : key.Contains("-2-") ? "2" : "3";
+                    Color accent = num == "1" ? Color.FromArgb(56, 189, 248)
+                        : num == "2" ? Color.FromArgb(167, 139, 250)
+                        : Color.FromArgb(251, 191, 36);
+
+                    var rect = new RectangleF(1.5f, 1.5f, 17f, 17f);
+                    using var path = new System.Drawing.Drawing2D.GraphicsPath();
+                    float d = 7f;
+                    path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                    path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                    path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                    path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                    path.CloseFigure();
+
+                    using var fill = new SolidBrush(on ? Color.FromArgb(36, accent) : Color.FromArgb(15, 23, 36));
+                    using var border = new Pen(on ? accent : Color.FromArgb(120, accent), 1.5f);
+                    g.FillPath(fill, path);
+                    g.DrawPath(border, path);
+
+                    // Geometrically center the digit using exact glyph outline bounds
+                    using var textPath = new System.Drawing.Drawing2D.GraphicsPath();
+                    using var family = new FontFamily("Segoe UI");
+                    textPath.AddString(num, family, (int)FontStyle.Bold, 11.5f, PointF.Empty, StringFormat.GenericTypographic);
+                    var bounds = textPath.GetBounds();
+                    float dx = (rect.X + rect.Width / 2f) - (bounds.X + bounds.Width / 2f);
+                    float dy = (rect.Y + rect.Height / 2f) - (bounds.Y + bounds.Height / 2f);
+                    using var matrix = new System.Drawing.Drawing2D.Matrix();
+                    matrix.Translate(dx, dy);
+                    textPath.Transform(matrix);
+                    using var numBrush = new SolidBrush(on ? Color.FromArgb(248, 250, 252) : Color.FromArgb(148, 163, 184));
+                    g.FillPath(numBrush, textPath);
+
+                    if (on)
+                    {
+                        using var dotBg = new SolidBrush(Color.FromArgb(12, 17, 28));
+                        using var dot = new SolidBrush(Color.FromArgb(52, 211, 153));
+                        g.FillEllipse(dotBg, 13.5f, 13.5f, 6f, 6f);
+                        g.FillEllipse(dot, 14.3f, 14.3f, 4.4f, 4.4f);
+                    }
+                    break;
+                }
+                case "focus":
+                {
+                    using var pen = new Pen(Color.FromArgb(56, 189, 248), 1.75f);
+                    g.DrawEllipse(pen, 4, 4, 12, 12);
+                    g.DrawLine(pen, 10, 2, 10, 5.5f);
+                    g.DrawLine(pen, 10, 14.5f, 10, 18);
+                    g.DrawLine(pen, 2, 10, 5.5f, 10);
+                    g.DrawLine(pen, 14.5f, 10, 18, 10);
+                    break;
+                }
+                case "restart":
+                {
+                    using var pen = new Pen(Color.FromArgb(203, 213, 225), 1.75f)
+                    {
+                        StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                        EndCap = System.Drawing.Drawing2D.LineCap.Round
+                    };
+                    g.DrawArc(pen, 4, 4, 12, 12, 40, 280);
+                    g.DrawLines(pen, new[] { new PointF(13f, 3.2f), new PointF(16f, 6.2f), new PointF(12.5f, 7.5f) });
+                    break;
+                }
+                case "launch":
+                {
+                    using var b = new SolidBrush(Color.FromArgb(52, 211, 153));
+                    g.FillPolygon(b, new[] { new PointF(5.5f, 4f), new PointF(16f, 10f), new PointF(5.5f, 16f) });
+                    break;
+                }
+                case "kill":
+                {
+                    using var b = new SolidBrush(Color.FromArgb(251, 113, 133));
+                    g.FillRectangle(b, 5, 5, 10, 10);
+                    break;
+                }
+                case "settings":
+                {
+                    using var pen = new Pen(Color.FromArgb(148, 163, 184), 1.75f);
+                    g.DrawEllipse(pen, 6.5f, 6.5f, 7, 7);
+                    for (int a = 0; a < 360; a += 45)
+                    {
+                        double rad = a * Math.PI / 180.0;
+                        float x1 = 10f + (float)Math.Cos(rad) * 5.2f;
+                        float y1 = 10f + (float)Math.Sin(rad) * 5.2f;
+                        float x2 = 10f + (float)Math.Cos(rad) * 7.8f;
+                        float y2 = 10f + (float)Math.Sin(rad) * 7.8f;
+                        g.DrawLine(pen, x1, y1, x2, y2);
+                    }
+                    break;
+                }
+                case "exit":
+                {
+                    using var pen = new Pen(Color.FromArgb(248, 113, 113), 2f)
+                    {
+                        StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                        EndCap = System.Drawing.Drawing2D.LineCap.Round
+                    };
+                    g.DrawLine(pen, 5.5f, 5.5f, 14.5f, 14.5f);
+                    g.DrawLine(pen, 14.5f, 5.5f, 5.5f, 14.5f);
+                    break;
+                }
+            }
+
+            _trayGlyphs[key] = bmp;
+            return bmp;
+        }
+
+        private ToolStripMenuItem CreateMenuItem(string text, string glyphKey, Color foreColor, Font? font = null)
+        {
+            return new ToolStripMenuItem(text)
+            {
+                Image = GetTrayGlyph(glyphKey),
+                ForeColor = foreColor,
+                Font = font ?? _trayMenu.Font,
+                Padding = new Padding(4, 4, 12, 4)
+            };
+        }
+
         private void OnTrayMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             _trayMenu.Items.Clear();
 
-            var headerItem = new ToolStripMenuItem("⚡ Antigravity Multi-Account Hub")
-            {
-                ForeColor = Color.FromArgb(56, 189, 248)
-            };
+            var headerItem = CreateMenuItem(
+                "Antigravity Hub",
+                "hub",
+                Color.FromArgb(110, 231, 183),
+                new Font("Segoe UI Semibold", 9.5f));
             headerItem.Click += (s, args) => RestoreAndFocusHub();
             _trayMenu.Items.Add(headerItem);
             _trayMenu.Items.Add(new ToolStripSeparator());
@@ -1886,48 +2114,45 @@ namespace AntigravityHub
             {
                 bool running = acc.Status == "running";
                 string statusText = running
-                    ? $"[🟢 Running] Account {acc.Id} ({acc.Label})"
-                    : $"[⚪ Stopped] Account {acc.Id} ({acc.Label})";
+                    ? $"Account {acc.Id} · {acc.Label}   (Running)"
+                    : $"Account {acc.Id} · {acc.Label}   (Stopped)";
 
-                var accMenu = new ToolStripMenuItem(statusText)
+                var accMenu = CreateMenuItem(
+                    statusText,
+                    running ? $"acc-{acc.Id}-on" : $"acc-{acc.Id}-off",
+                    running ? Color.FromArgb(241, 245, 249) : Color.FromArgb(148, 163, 184),
+                    running ? new Font("Segoe UI Semibold", 9.5f) : _trayMenu.Font);
+
+                if (accMenu.DropDown is ToolStripDropDownMenu subDrop)
                 {
-                    ForeColor = running ? Color.FromArgb(110, 231, 183) : Color.FromArgb(203, 213, 225)
-                };
+                    subDrop.ShowImageMargin = true;
+                    subDrop.ShowCheckMargin = false;
+                    subDrop.ImageScalingSize = new Size(20, 20);
+                    subDrop.Padding = new Padding(2, 5, 2, 5);
+                }
 
                 int accId = acc.Id;
                 if (running)
                 {
-                    var focusSub = new ToolStripMenuItem($"🎯 Focus Window (PID {acc.Pid})")
-                    {
-                        ForeColor = Color.White
-                    };
+                    var focusSub = CreateMenuItem($"Focus Window  (PID {acc.Pid})", "focus", Color.FromArgb(186, 230, 253));
                     focusSub.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.FocusInstance(accId));
 
-                    var restartSub = new ToolStripMenuItem("🔄 Restart Instance")
-                    {
-                        ForeColor = Color.White
-                    };
+                    var restartSub = CreateMenuItem("Restart Instance", "restart", Color.FromArgb(226, 232, 240));
                     restartSub.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.RestartInstance(accId));
 
-                    var killSub = new ToolStripMenuItem("🛑 Kill Process")
-                    {
-                        ForeColor = Color.FromArgb(251, 113, 133)
-                    };
+                    var killSub = CreateMenuItem("Kill Process", "kill", Color.FromArgb(253, 164, 175));
                     killSub.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.TerminateInstance(accId));
 
                     accMenu.DropDownItems.Add(focusSub);
                     accMenu.DropDownItems.Add(restartSub);
                     accMenu.DropDownItems.Add(killSub);
 
-                    // Also allow direct click to Focus
+                    // Direct click focuses the instance
                     accMenu.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.FocusInstance(accId));
                 }
                 else
                 {
-                    var launchSub = new ToolStripMenuItem("🚀 Launch Instance")
-                    {
-                        ForeColor = Color.FromArgb(56, 189, 248)
-                    };
+                    var launchSub = CreateMenuItem("Launch Instance", "launch", Color.FromArgb(110, 231, 183));
                     launchSub.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.LaunchInstance(accId));
                     accMenu.DropDownItems.Add(launchSub);
                     accMenu.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.LaunchInstance(accId));
@@ -1938,24 +2163,15 @@ namespace AntigravityHub
 
             _trayMenu.Items.Add(new ToolStripSeparator());
 
-            var launchAllItem = new ToolStripMenuItem("🚀 Launch All Instances")
-            {
-                ForeColor = Color.FromArgb(110, 231, 183)
-            };
+            var launchAllItem = CreateMenuItem("Launch All Accounts", "launch", Color.FromArgb(110, 231, 183));
             launchAllItem.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.LaunchAllInstances());
             _trayMenu.Items.Add(launchAllItem);
 
-            var killAllItem = new ToolStripMenuItem("🛑 Terminate All Instances")
-            {
-                ForeColor = Color.FromArgb(251, 113, 133)
-            };
+            var killAllItem = CreateMenuItem("Terminate All", "kill", Color.FromArgb(253, 164, 175));
             killAllItem.Click += (s, args) => RunTrayActionAsync(() => _orchestrator.TerminateAllInstances());
             _trayMenu.Items.Add(killAllItem);
 
-            var settingsItem = new ToolStripMenuItem("⚙️ Settings & Paths")
-            {
-                ForeColor = Color.FromArgb(226, 232, 240)
-            };
+            var settingsItem = CreateMenuItem("Settings && Paths", "settings", Color.FromArgb(226, 232, 240));
             settingsItem.Click += (s, args) =>
             {
                 RestoreAndFocusHub();
@@ -1965,10 +2181,7 @@ namespace AntigravityHub
 
             _trayMenu.Items.Add(new ToolStripSeparator());
 
-            var exitItem = new ToolStripMenuItem("❌ Exit Hub")
-            {
-                ForeColor = Color.FromArgb(248, 113, 113)
-            };
+            var exitItem = CreateMenuItem("Exit Hub", "exit", Color.FromArgb(248, 113, 113));
             exitItem.Click += (s, args) => ExitHubApplication();
             _trayMenu.Items.Add(exitItem);
         }
@@ -2379,6 +2592,8 @@ namespace AntigravityHub
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
                 _trayMenu.Dispose();
+                foreach (var bmp in _trayGlyphs.Values) { try { bmp.Dispose(); } catch { } }
+                _trayGlyphs.Clear();
             }
             catch { }
             base.OnFormClosing(e);
@@ -2394,6 +2609,8 @@ namespace AntigravityHub
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
                 _trayMenu.Dispose();
+                foreach (var bmp in _trayGlyphs.Values) { try { bmp.Dispose(); } catch { } }
+                _trayGlyphs.Clear();
             }
             catch { }
             Application.Exit();

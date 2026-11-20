@@ -7,8 +7,6 @@ node_modules/
 src-native/bin/
 src-native/obj/
 src-tauri/target/
-tests/**/bin/
-tests/**/obj/
 dist/
 release/
 *.zip

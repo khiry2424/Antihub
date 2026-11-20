@@ -444,29 +444,36 @@ namespace AntigravityShortcutBuilder
                     }
                 }
 
-                // Stylized "A" delta symbol in center
-                PointF[] outerDelta = new PointF[]
+                // Unified geometric "A" symbol with seamless integrated crossbar
+                using (GraphicsPath aPath = new GraphicsPath(FillMode.Alternate))
                 {
-                    new PointF(128, 46),
-                    new PointF(196, 178),
-                    new PointF(162, 178),
-                    new PointF(128, 108),
-                    new PointF(94, 178),
-                    new PointF(60, 178)
-                };
-                using (LinearGradientBrush deltaBrush = new LinearGradientBrush(
-                    new Rectangle(40, 40, 180, 160),
-                    Color.White,
-                    accent,
-                    90f))
-                {
-                    gfx.FillPolygon(deltaBrush, outerDelta);
-                }
+                    PointF[] outerA = new PointF[]
+                    {
+                        new PointF(128, 46),
+                        new PointF(196, 180),
+                        new PointF(164, 180),
+                        new PointF(153, 154),
+                        new PointF(103, 154),
+                        new PointF(92, 180),
+                        new PointF(60, 180)
+                    };
+                    PointF[] innerCutout = new PointF[]
+                    {
+                        new PointF(128, 94),
+                        new PointF(144, 132),
+                        new PointF(112, 132)
+                    };
+                    aPath.AddPolygon(outerA);
+                    aPath.AddPolygon(innerCutout);
 
-                // Crossbar glow
-                using (SolidBrush barBrush = new SolidBrush(accent))
-                {
-                    gfx.FillRectangle(barBrush, 95, 142, 66, 16);
+                    using (LinearGradientBrush deltaBrush = new LinearGradientBrush(
+                        new Rectangle(46, 46, 160, 140),
+                        Color.White,
+                        accent,
+                        90f))
+                    {
+                        gfx.FillPath(deltaBrush, aPath);
+                    }
                 }
 
                 // Account Number Badge Pill in bottom-right corner

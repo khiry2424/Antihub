@@ -1,137 +1,75 @@
-# 🚀 Antigravity Multi-Account Hub (Antihub)
+# Antigravity Multi-Account Hub (Antihub)
 
 [![Platform: Windows 10 / 11](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-0078D6?logo=windows)](https://microsoft.com/windows)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Framework: .NET 10 / Win32 Shell](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Frontend: React 19 + Vite + Tailwind](https://img.shields.io/badge/UI-React%2019%20%2B%20Tailwind-38B2AC?logo=react)](https://react.dev/)
 
-A high-performance Windows desktop orchestrator built for **Google Antigravity**. It enables developers to concurrently run up to **3 independent Google accounts** side-by-side with complete authentication isolation, unstacked Windows Taskbar tiles (distinct AppUserModelIDs), and a synchronized conversation history & agent brain.
+A Windows desktop launcher and process manager for **Google Antigravity** that lets you run up to **3 separate Google accounts** side-by-side without logging out, while keeping your conversation history and agent brain shared across all three.
 
 ![Antigravity Multi-Account Hub Dashboard](assets/screenshots/hub-dashboard.png)
 
----
+## Why Antihub?
 
-## 🌟 Key Features
+Normally, running multiple Google accounts in Antigravity means signing out or fighting Windows taskbar grouping and duplicate tray icons. Antihub solves this at the OS level:
 
-1. **🔐 3 Concurrent Isolated Accounts**
-   - Each instance maintains its own dedicated Chromium profile (`--user-data-dir`):
-     - **Account 1 (Personal):** `%APPDATA%\Antigravity-Profiles\Account1`
-     - **Account 2 (Work):** `%APPDATA%\Antigravity-Profiles\Account2`
-     - **Account 3 (Secondary):** `%APPDATA%\Antigravity-Profiles\Account3`
-   - OAuth tokens, login cookies, and sessions remain strictly separated.
+- **Isolated Authentication (`--user-data-dir`):** Accounts 1, 2, and 3 each get their own Chromium profile under `%APPDATA%\Antigravity-Profiles\Account1..3`, keeping OAuth tokens and cookies completely separate.
+- **Shared Brain & Conversations:** Sets `ANTIGRAVITY_APP_DATA_DIR` and NTFS directory junctions so all three accounts read and write to the same `%USERPROFILE%\.gemini\antigravity` directory and SQLite conversation database.
+- **Separate Windows Taskbar Icons:** Generates distinct `System.AppUserModel.ID` shortcuts (`Antigravity.Account.1`, `Antigravity.Account.2`, `Antigravity.Account.3`) with custom numbered icons and stamps active window handles (`HWND`) so Windows doesn't stack them together.
+- **Single System Tray Menu:** Sits in your Windows notification tray with live status, Focus/Launch/Kill/Restart controls, and hides duplicate Antigravity tray icons.
 
-2. **🧠 Unified Agent Brain & Conversations**
-   - Automatically injects and enforces:
-     ```cmd
-     ANTIGRAVITY_APP_DATA_DIR = "%USERPROFILE%\.gemini\antigravity"
-     ```
-   - All 3 instances share the same central SQLite database (`conversation_summaries.db`), saved conversations, and brain context directories.
-   - Built-in SQLite WAL mode verification and lock guard.
+<p align="center">
+  <img src="assets/screenshots/antihub-tray-menu.png" alt="Antihub System Tray Menu" width="360" />
+</p>
 
-3. **🪟 Independent Windows Taskbar Tiles (Unstacked AUMIDs)**
-   - Windows normally stacks all `Antigravity.exe` windows under a single generic taskbar icon.
-   - Antihub generates distinct Win32 `System.AppUserModel.ID` entries (`Antigravity.Account.1`, `Antigravity.Account.2`, `Antigravity.Account.3`) with custom badged high-res icons.
-   - Automatically stamps active window handles (`HWND`) via Win32 Shell APIs (`SHGetPropertyStoreForWindow` & `WM_SETICON`) so each account appears as an independent icon on your taskbar.
+## Quick Start (Prebuilt Release)
 
-4. **⚡ Background System Tray & Process Monitor**
-   - Sits in the Windows notification tray next to the system clock.
-   - Real-time CPU, RAM, and process polling for each account.
-   - Quick actions: Launch, Focus Window (`SetForegroundWindow`), Kill, Restart, Clear Auth Cache, and Open Profile Folders.
+If you downloaded a packaged release zip, make sure **.NET 10 Desktop Runtime (x64)** is installed on Windows (no Node.js or SDK required):
 
----
+1. Extract `Antihub.zip` to a folder of your choice.
+2. Run **`Setup-Shortcuts.bat`** once to create the 3 isolated profile folders, icons, and taskbar shortcuts.
+3. Run **`Run-AntigravityHub.bat`** to open the Hub dashboard (or manage accounts from the system tray icon).
 
-## 💻 Quick Start (Ready to Run on Laptop)
+## Building from Source
 
-For prebuilt framework-dependent releases, ensure **.NET 10 Desktop Runtime (x64)** is installed on Windows (no Node.js or SDK needed; or compile a self-contained bundle with `build.bat self-contained`):
+### Requirements
+- Windows 10 or 11 (64-bit)
+- Node.js 18+
+- .NET 10.0 SDK
+- PowerShell 5.1+
 
-1. Extract the downloaded `Antihub.zip` to any folder on your laptop.
-2. Run **`Setup-Shortcuts.bat`** (first time only):
-   - Generates the 3 isolated profiles in `%APPDATA%\Antigravity-Profiles`.
-   - Creates the 3 distinct shortcuts on your Desktop and Start Menu.
-3. Run **`Run-AntigravityHub.bat`**:
-   - Launches the compiled native dashboard (`release\AntigravityHub.exe`).
-   - Use the sleek dashboard or system tray icon to control your accounts!
+### Build Steps
+Run the build script from the repository root:
 
----
-
-## 🛠️ Building From Source
-
-If you want to modify the code or contribute to the project:
-
-### Prerequisites
-- **Windows 10 / 11** (64-bit)
-- **Node.js** (v18+)
-- **.NET 10.0 SDK** (Desktop / Windows runtime)
-- **PowerShell 5.1+**
-
-### Build Pipeline
-Run the all-in-one build script:
 ```cmd
 build.bat
 ```
-(Or run `build.bat self-contained` to bundle the .NET 10 runtime alongside the executable for machines without `.NET 10 Desktop Runtime`.)
 
-This automatically:
-1. Generates the isolated profiles and Win32 badged icons.
-2. Builds the React + TypeScript + Tailwind CSS UI bundle into `dist/`.
-3. Compiles the native C# Win32 host into `release\AntigravityHub.exe`.
-4. Stages frontend assets and scripts into the `release/` bundle.
+To bundle the .NET 10 runtime alongside the executable (for PCs without `.NET 10 Desktop Runtime` installed):
 
-### Running Tests
 ```cmd
-npm test
-```
-Runs TypeScript typechecking (`tsc --noEmit`) and the C# unit test suite (`tests/Antihub.Tests`).
-
----
-
-## 📁 Repository Structure
-
-```text
-Antihub/
-├── assets/                    # High-res icons (AntigravityHub.ico, Account1-3.ico)
-├── release/                   # Prebuilt, ready-to-run Windows executable & runtime
-│   ├── AntigravityHub.exe     # Standalone native launcher
-│   ├── dist/                  # Bundled React UI
-│   └── runtimes/              # Windows WebView2 & architecture runtimes
-├── scripts/                   # PowerShell orchestration scripts
-│   ├── generate-shortcuts.ps1 # AUMID shell shortcut generator & NTFS junction links
-│   └── clean-profiles.ps1     # Stale credential cleanup utility
-├── src/                       # React 19 + TypeScript + Tailwind CSS frontend
-│   ├── components/            # Account cards, brain synchronizer, logs, settings
-│   └── bridge/                # Bidirectional WebView2 IPC bridge
-├── src-native/                # C# .NET 10 WinForms/WebView2 native host
-│   ├── Program.cs             # Process manager, Win32 API hooks, system tray
-│   └── AntigravityHub.csproj  # Project file
-├── src-tauri/                 # Optional Tauri v2 (Rust) alternative prototype
-├── tests/                     # Automated C# unit & security validation tests
-├── build.bat                  # Complete build & compilation script
-├── Run-AntigravityHub.bat     # 1-Click launcher
-├── Setup-Shortcuts.bat        # 1-Click shortcut & profile generator
-├── LICENSE                    # MIT Open Source License
-└── README.md                  # Documentation (English & Arabic)
+build.bat self-contained
 ```
 
----
+This builds the React UI (`dist/`), compiles `release\AntigravityHub.exe`, generates the account icons/shortcuts, and copies the runtime assets into `release/`.
 
-## 🇸🇦 دليل الاستخدام والتشغيل السريع (باللغة العربية)
+## Project Layout
 
-### 📌 التشغيل الفوري على اللابتوب (بدون الحاجة لأي تثبيت أو بناء):
-1. قم بفك ضغط ملف `Antihub.zip` في أي مسار تريده على اللابتوب.
-2. شغّل ملف **`Setup-Shortcuts.bat`** (لمرة واحدة فقط):
-   - سيقوم بإنشاء المجلدات المعزولة للحسابات الثلاثة داخل مسار `%APPDATA%\Antigravity-Profiles`.
-   - سيُنشئ 3 اختصارات مستقلة على سطح المكتب لكل حساب بأيقونات ملونة وهوية مستقلة على شريط المهام (Taskbar).
-3. شغّل ملف **`Run-AntigravityHub.bat`**:
-   - سيفتح لوحة التحكم الاحترافية فوراً (`release\AntigravityHub.exe`).
-   - يمكنك تشغيل أي حساب، مراقبة استهلاك الرام والمعالج، والتحكم بكل شيء من خلال لوحة التحكم أو أيقونة صينية النظام (System Tray) بجوار الساعة.
-
-### 🌐 الاستعداد لرفع المشروع على GitHub:
-المشروع الآن مهيأ بالكامل ليصبح مشروعاً مفتوح المصدر (Open Source):
-- يحتوي على ملف ترخيص MIT (`LICENSE`).
-- يحتوي على ملف `.gitignore` متكامل يستثني تلقائياً ملفات `node_modules` ومخلفات البناء المؤقتة.
-- الكود منظم بدون أي مسارات ثابتة (Hardcoded paths) ويعتمد كلياً على متغيرات بيئة ويندوز الديناميكية (`%APPDATA%` و `%USERPROFILE%`).
+- `src/` — React 19 + TypeScript + Tailwind CSS dashboard UI
+- `src-native/` — C# (.NET 10) WinForms + WebView2 desktop host, Win32 AUMID stamping, and system tray menu
+- `scripts/` — PowerShell scripts for generating icons/shortcuts, cleaning stale profile creds, and packaging release zips
+- `assets/` — Application icons (`AntigravityHub.ico`, `Account1-3.ico`) and screenshots
+- `src-tauri/` — Optional Tauri v2 (Rust) prototype (`build.bat` uses `src-native/`)
 
 ---
 
-## 📄 License
-This project is licensed under the [MIT License](LICENSE).
+## التشغيل السريع (بالعربية)
+
+1. تأكد من تثبيت **.NET 10 Desktop Runtime (x64)** على ويندوز (إذا كنت تستخدم النسخة الجاهزة بدون بناء).
+2. فك ضغط ملف `Antihub.zip` في أي مجلد.
+3. شغّل **`Setup-Shortcuts.bat`** مرة واحدة لإنشاء المجلدات المعزولة للحسابات الثلاثة والأيقونات والاختصارات.
+4. شغّل **`Run-AntigravityHub.bat`** لفتح لوحة التحكم، أو تحكم بالحسابات مباشرة من أيقونة البرنامج في شريط النظام (System Tray).
+
+## License
+
+Licensed under the [MIT License](LICENSE).
