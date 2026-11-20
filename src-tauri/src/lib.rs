@@ -75,6 +75,7 @@ pub struct HubConfig {
     pub sync_keybindings: bool,
     pub sync_snippets: bool,
     pub auto_stamp_window_aumid: bool,
+    pub hide_child_tray_icons: bool,
     pub minimize_to_tray_on_close: bool,
     pub poll_interval_ms: u64,
     pub accounts: Vec<AccountConfigItem>,
@@ -116,6 +117,7 @@ fn default_config() -> HubConfig {
         sync_keybindings: true,
         sync_snippets: true,
         auto_stamp_window_aumid: true,
+        hide_child_tray_icons: true,
         minimize_to_tray_on_close: true,
         poll_interval_ms: 1500,
         accounts: vec![

@@ -228,6 +228,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
                 <span className="text-zinc-300">Minimize to Tray on close [X]</span>
               </label>
+
+              <label className="flex items-center gap-2 p-2 rounded-lg bg-black/25 border border-white/[0.04] cursor-pointer sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={draft.hideChildTrayIcons ?? true}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      hideChildTrayIcons: e.target.checked,
+                    })
+                  }
+                  className="rounded border-zinc-700 text-sky-500 focus:ring-0"
+                />
+                <span className="text-zinc-300">
+                  Single Hub Tray Mode (hide duplicate Antigravity tray icons)
+                </span>
+              </label>
             </div>
           </div>
 

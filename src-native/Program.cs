@@ -70,6 +70,58 @@ namespace AntigravityHub
         public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
         public static readonly IntPtr HWND_BROADCAST = new IntPtr(0xffff);
+        public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
+        public const uint NIM_DELETE = 0x00000002;
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct NOTIFYICONIDENTIFIER
+        {
+            public uint cbSize;
+            public IntPtr hWnd;
+            public uint uID;
+            public Guid guidItem;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct NOTIFYICONDATAW
+        {
+            public uint cbSize;
+            public IntPtr hWnd;
+            public uint uID;
+            public uint uFlags;
+            public uint uCallbackMessage;
+            public IntPtr hIcon;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string szTip;
+            public uint dwState;
+            public uint dwStateMask;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            public string szInfo;
+            public uint uTimeoutOrVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+            public string szInfoTitle;
+            public uint dwInfoFlags;
+            public Guid guidItem;
+            public IntPtr hBalloonIcon;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool Shell_NotifyIconW(uint dwMessage, ref NOTIFYICONDATAW lpData);
+
+        [DllImport("shell32.dll")]
+        public static extern int Shell_NotifyIconGetRect(ref NOTIFYICONIDENTIFIER identifier, out RECT iconLocation);
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern uint RegisterWindowMessage(string lpString);
@@ -178,6 +230,7 @@ namespace AntigravityHub
         [JsonPropertyName("syncKeybindings")] public bool SyncKeybindings { get; set; } = true;
         [JsonPropertyName("syncSnippets")] public bool SyncSnippets { get; set; } = true;
         [JsonPropertyName("autoStampWindowAumid")] public bool AutoStampWindowAumid { get; set; } = true;
+        [JsonPropertyName("hideChildTrayIcons")] public bool HideChildTrayIcons { get; set; } = true;
         [JsonPropertyName("minimizeToTrayOnClose")] public bool MinimizeToTrayOnClose { get; set; } = true;
         [JsonPropertyName("pollIntervalMs")] public int PollIntervalMs { get; set; } = 1500;
         [JsonPropertyName("accounts")] public List<AccountConfigItem> Accounts { get; set; } = new();
@@ -251,6 +304,8 @@ namespace AntigravityHub
         private readonly ConcurrentDictionary<int, int> _pidToAccountCache = new();
         private readonly ConcurrentDictionary<int, long> _stampedWindows = new();
         private readonly ConcurrentDictionary<int, (DateTime LastWriteUtc, string? Email)> _emailCache = new();
+        private readonly ConcurrentDictionary<int, int> _traySuppressAttempts = new();
+        private readonly ConcurrentDictionary<int, byte> _suppressedTrayPids = new();
         private readonly object _snapshotLock = new();
         private HubStateSnapshotDto? _lastSnapshot;
         private DateTime _lastSnapshotUtc = DateTime.MinValue;
@@ -421,6 +476,8 @@ namespace AntigravityHub
         {
             _config = NormalizeConfig(updated);
             _envEnsured = false;
+            _traySuppressAttempts.Clear();
+            _suppressedTrayPids.Clear();
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_configFilePath)!);
@@ -724,6 +781,8 @@ namespace AntigravityHub
                     if (!activePidsSet.Contains(cachedPid))
                     {
                         _pidToAccountCache.TryRemove(cachedPid, out _);
+                        _suppressedTrayPids.TryRemove(cachedPid, out _);
+                        _traySuppressAttempts.TryRemove(cachedPid, out _);
                     }
                 }
 
@@ -743,6 +802,11 @@ namespace AntigravityHub
                         pidsByAccount[kvp.Value].Add(kvp.Key);
                         allAccountPids[kvp.Key] = kvp.Value;
                     }
+                }
+
+                if (_config.HideChildTrayIcons && allAccountPids.Count > 0)
+                {
+                    SuppressChildAntigravityTrayIcons(allAccountPids);
                 }
 
                 // Single EnumWindows pass across all running accounts (or skip if none running!)
@@ -931,6 +995,84 @@ namespace AntigravityHub
             }, IntPtr.Zero);
 
             return found;
+        }
+
+        private void SuppressChildAntigravityTrayIcons(Dictionary<int, int> allAccountPids)
+        {
+            int selfPid = Environment.ProcessId;
+            var targetPids = new HashSet<int>();
+            foreach (int pid in allAccountPids.Keys)
+            {
+                if (pid != selfPid && !_suppressedTrayPids.ContainsKey(pid))
+                {
+                    targetPids.Add(pid);
+                }
+            }
+            if (targetPids.Count == 0) return;
+
+            var candidates = new List<(IntPtr Hwnd, int Pid)>();
+
+            Win32Native.EnumWindows((hWnd, lParam) =>
+            {
+                Win32Native.GetWindowThreadProcessId(hWnd, out uint winPid);
+                int pid = (int)winPid;
+                if (targetPids.Contains(pid))
+                {
+                    candidates.Add((hWnd, pid));
+                }
+                return true;
+            }, IntPtr.Zero);
+
+            IntPtr msgCur = IntPtr.Zero;
+            while ((msgCur = Win32Native.FindWindowEx(Win32Native.HWND_MESSAGE, msgCur, null, null)) != IntPtr.Zero)
+            {
+                Win32Native.GetWindowThreadProcessId(msgCur, out uint winPid);
+                int pid = (int)winPid;
+                if (targetPids.Contains(pid))
+                {
+                    candidates.Add((msgCur, pid));
+                }
+            }
+
+            uint cbSize = (uint)Marshal.SizeOf<Win32Native.NOTIFYICONDATAW>();
+            var suppressedNow = new HashSet<int>();
+
+            foreach (var (hwnd, pid) in candidates)
+            {
+                for (uint uid = 0; uid <= 16; uid++)
+                {
+                    var nid = new Win32Native.NOTIFYICONDATAW
+                    {
+                        cbSize = cbSize,
+                        hWnd = hwnd,
+                        uID = uid,
+                        szTip = "",
+                        szInfo = "",
+                        szInfoTitle = ""
+                    };
+                    if (Win32Native.Shell_NotifyIconW(Win32Native.NIM_DELETE, ref nid))
+                    {
+                        suppressedNow.Add(pid);
+                    }
+                }
+            }
+
+            foreach (int pid in suppressedNow)
+            {
+                _suppressedTrayPids[pid] = 1;
+            }
+
+            foreach (int pid in targetPids)
+            {
+                if (!suppressedNow.Contains(pid))
+                {
+                    int attempts = _traySuppressAttempts.AddOrUpdate(pid, 1, (_, c) => c + 1);
+                    if (attempts >= 12)
+                    {
+                        _suppressedTrayPids[pid] = 1;
+                    }
+                }
+            }
         }
 
         private void StampWindowAumidAndIcon(

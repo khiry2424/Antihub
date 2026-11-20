@@ -7,7 +7,6 @@ import {
   Activity,
   Cpu,
   HardDrive,
-  Layers,
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react';
@@ -284,8 +283,42 @@ export const App: React.FC = () => {
         {/* Top Command Bar (Pro Studio Header) */}
         <header className="glass-panel rounded-xl px-4 py-2.5 border border-white/[0.08] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shadow-inner text-sky-400">
-              <Layers className="w-4 h-4" />
+            <div
+              className="w-9 h-9 rounded-lg bg-[#0A131C] border border-emerald-500/70 flex items-center justify-center shadow-[0_0_14px_rgba(16,185,129,0.22)] shrink-0"
+              title="Antigravity Multi-Account Hub"
+            >
+              <svg
+                viewBox="0 0 36 36"
+                className="w-6 h-6"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {/* Bottom layer (Deep Emerald) */}
+                <polygon
+                  points="18,16 29,20.5 18,25 7,20.5"
+                  fill="#047857"
+                  stroke="#059669"
+                  strokeWidth="0.7"
+                />
+                {/* Middle layer (Bright Emerald) */}
+                <polygon
+                  points="18,11 29,15.5 18,20 7,15.5"
+                  fill="#10B981"
+                  stroke="#34D399"
+                  strokeWidth="0.7"
+                />
+                {/* Top layer (Mint Highlight) */}
+                <polygon
+                  points="18,6 29,10.5 18,15 7,10.5"
+                  fill="#6EE7B7"
+                  stroke="#D1FAE5"
+                  strokeWidth="0.7"
+                />
+                {/* 3 Isolated Account Dots: Cyan, Violet, Amber */}
+                <circle cx="11.5" cy="29.5" r="2.2" fill="#38BDF8" />
+                <circle cx="18" cy="29.5" r="2.2" fill="#C084FC" />
+                <circle cx="24.5" cy="29.5" r="2.2" fill="#FBBF24" />
+              </svg>
             </div>
 
             <div>

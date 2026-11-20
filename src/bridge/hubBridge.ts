@@ -201,6 +201,7 @@ let fallbackState: HubStateSnapshot = {
     syncKeybindings: true,
     syncSnippets: true,
     autoStampWindowAumid: true,
+    hideChildTrayIcons: true,
     minimizeToTrayOnClose: true,
     pollIntervalMs: 1500,
     accounts: [

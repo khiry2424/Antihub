@@ -47,6 +47,7 @@ export interface HubConfig {
   syncKeybindings: boolean;
   syncSnippets: boolean;
   autoStampWindowAumid: boolean;
+  hideChildTrayIcons: boolean;
   minimizeToTrayOnClose: boolean;
   pollIntervalMs: number;
   accounts: {
