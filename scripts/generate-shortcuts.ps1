@@ -273,6 +273,22 @@ namespace AntigravityShortcutBuilder
         // System.AppUserModel.ID = {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 5
         private static readonly Guid AppUserModelGuid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3");
 
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern void SHChangeNotify(int wEventId, int uFlags, string dwItem1, IntPtr dwItem2);
+
+        public static void RefreshShellFolder(string folderPath)
+        {
+            try
+            {
+                if (Directory.Exists(folderPath))
+                {
+                    SHChangeNotify(0x00001000, 0x0005, folderPath, IntPtr.Zero); // SHCNE_UPDATEDIR | SHCNF_PATHW
+                }
+                SHChangeNotify(0x08000000, 0x0000, null, IntPtr.Zero); // SHCNE_ASSOCCHANGED
+            }
+            catch { }
+        }
+
         private static void SetPropertyString(IPropertyStore store, Guid guid, uint pid, string val)
         {
             PROPERTYKEY pkey = new PROPERTYKEY(guid, pid);
@@ -847,6 +863,11 @@ if (Test-Path $hubExe) {
 [Environment]::SetEnvironmentVariable("ANTIGRAVITY_APP_DATA_DIR", $SharedAppDataDir, "User")
 $env:ANTIGRAVITY_APP_DATA_DIR = $SharedAppDataDir
 Write-Host "[+] Enforced ANTIGRAVITY_APP_DATA_DIR = $SharedAppDataDir" -ForegroundColor Green
+
+$smFolder = if ($env:APPDATA) { Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Antigravity Hub" } else { $null }
+if ($smFolder) {
+    [AntigravityShortcutBuilder.Builder]::RefreshShellFolder($smFolder)
+}
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host " All 3 AUMID Shortcuts & Isolated Profiles Ready!              " -ForegroundColor Green
